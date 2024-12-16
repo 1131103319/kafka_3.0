@@ -240,6 +240,7 @@ public class Sender implements Runnable {
         // main loop, runs until close is called
         while (running) {
             try {
+                //todo  // sender 线程从缓冲区准备拉取数据，刚启动拉不到数据
                 runOnce();
             } catch (Exception e) {
                 log.error("Uncaught error in kafka producer I/O thread: ", e);
@@ -296,6 +297,7 @@ public class Sender implements Runnable {
      *
      */
     void runOnce() {
+        //todo  // 事务相关操作
         if (transactionManager != null) {
             try {
                 transactionManager.maybeResolveSequences();
@@ -324,15 +326,19 @@ public class Sender implements Runnable {
         }
 
         long currentTimeMs = time.milliseconds();
+        //todo  // 发送数据
         long pollTimeout = sendProducerData(currentTimeMs);
+        //todo  // 获取发送结果
         client.poll(pollTimeout, currentTimeMs);
     }
 
     private long sendProducerData(long now) {
+        //todo  // 获取元数据
         Cluster cluster = metadata.fetch();
         // get the list of partitions with data ready to send
+        //todo  // 1、判断32m缓存是否准备好
         RecordAccumulator.ReadyCheckResult result = this.accumulator.ready(cluster, now);
-
+        //todo  如果 Leader 信息不知道，是不能发送数据的
         // if there are any partitions whose leaders are not known yet, force metadata update
         if (!result.unknownLeaderTopics.isEmpty()) {
             // The set of topics with unknown leader contains topics with leader election pending as well as
@@ -358,6 +364,7 @@ public class Sender implements Runnable {
         }
 
         // create produce requests
+        //todo  // 发送每个节点数据，进行封装,这样一个分区的就可以打包一起发送
         Map<Integer, List<ProducerBatch>> batches = this.accumulator.drain(cluster, result.readyNodes, this.maxRequestSize, now);
         addToInflightBatches(batches);
         if (guaranteeMessageOrder) {
@@ -405,6 +412,7 @@ public class Sender implements Runnable {
             // otherwise the select time will be the time difference between now and the metadata expiry time;
             pollTimeout = 0;
         }
+        //todo  // 发送请求
         sendProduceRequests(batches, now);
         return pollTimeout;
     }

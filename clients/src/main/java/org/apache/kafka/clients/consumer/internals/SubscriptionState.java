@@ -163,8 +163,11 @@ public class SubscriptionState {
     }
 
     public synchronized boolean subscribe(Set<String> topics, ConsumerRebalanceListener listener) {
+        //todo  // 注册负载均衡监听器
         registerRebalanceListener(listener);
+        //todo  // 按照主题自动订阅模式
         setSubscriptionType(SubscriptionType.AUTO_TOPICS);
+        //todo  // 判断是否需要更改订阅的主题
         return changeSubscription(topics);
     }
 
@@ -183,6 +186,7 @@ public class SubscriptionState {
     }
 
     private boolean changeSubscription(Set<String> topicsToSubscribe) {
+        //todo  // 如果传入的topics 和以前订阅的主题一致，那就不需要更改对应订阅的主题
         if (subscription.equals(topicsToSubscribe))
             return false;
 
