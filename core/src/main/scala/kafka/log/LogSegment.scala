@@ -52,14 +52,14 @@ import scala.math._
  * @param time The time instance
  */
 @nonthreadsafe
-class LogSegment private[log] (val log: FileRecords,
-                               val lazyOffsetIndex: LazyIndex[OffsetIndex],
-                               val lazyTimeIndex: LazyIndex[TimeIndex],
-                               val txnIndex: TransactionIndex,
-                               val baseOffset: Long,
-                               val indexIntervalBytes: Int,
-                               val rollJitterMs: Long,
-                               val time: Time) extends Logging {
+class LogSegment private[log] (val log: FileRecords, //todo // 实际保存 Kafka 消息的对象
+                               val lazyOffsetIndex: LazyIndex[OffsetIndex], //todo // 对应位移索引文件，延迟初始化
+                               val lazyTimeIndex: LazyIndex[TimeIndex], //todo // 对应时间戳索引文件，延迟初始化
+                               val txnIndex: TransactionIndex, //todo // 已中止事务索引文件
+                               val baseOffset: Long, //todo // 每个日志段对象的起始位移
+                               val indexIntervalBytes: Int, //todo // 控制日志段对象新增索引项的频率。默认每 4KB 的消息数据新增一条索引项
+                               val rollJitterMs: Long, //todo // rollJitterMs 是日志段对象新增倒计时的“扰动值”
+                               val time: Time) extends Logging { //todo // 用于统计计时的一个实现类
 
   def offsetIndex: OffsetIndex = lazyOffsetIndex.get
 

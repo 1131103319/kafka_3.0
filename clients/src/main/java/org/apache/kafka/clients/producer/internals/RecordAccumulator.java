@@ -178,7 +178,7 @@ public final class RecordAccumulator {
             synchronized (dq) {
                 if (closed)
                     throw new KafkaException("Producer closed while send in progress");
-                //todo  // 尝试向队列里面添加数据（正常添加不成功）
+                //todo  // 尝试向队列里面添加数据（正常添加不成功 （没有分配内存、批次对象，所以失败））
                 RecordAppendResult appendResult = tryAppend(timestamp, key, value, headers, callback, dq, nowMs);
                 if (appendResult != null)
                     return appendResult;
@@ -191,10 +191,10 @@ public final class RecordAccumulator {
             }
 
             byte maxUsableMagic = apiVersions.maxUsableProduceMagic();
-            //todo // this.batchSize 默认16k    数据大小17k
+            //todo         // 取批次大小（默认 16k）和消息大小的最大值（上限默认 1m）。这样设计的主要原因是有可能一条消息的大小大于批次大小。
             int size = Math.max(this.batchSize, AbstractRecords.estimateSizeInBytesUpperBound(maxUsableMagic, compression, key, value, headers));
             log.trace("Allocating a new {} byte message buffer for topic {} partition {} with remaining timeout {}ms", size, tp.topic(), tp.partition(), maxTimeToBlock);
-            //todo  // 申请内存  内存池分配内存  双端队列
+            //todo         // 根据批次大小（默认 16k）和消息大小中最大值，分配内存
             buffer = free.allocate(size, maxTimeToBlock);
 
             // Update the current time in case the buffer allocation blocked above.
@@ -203,15 +203,15 @@ public final class RecordAccumulator {
                 // Need to check if producer is closed again after grabbing the dequeue lock.
                 if (closed)
                     throw new KafkaException("Producer closed while send in progress");
-
+                //todo             // 尝试向队列里面添加数据（有内存，但是没有批次对象）
                 RecordAppendResult appendResult = tryAppend(timestamp, key, value, headers, callback, dq, nowMs);
                 if (appendResult != null) {
                     // Somebody else found us a batch, return the one we waited for! Hopefully this doesn't happen often...
                     return appendResult;
                 }
-                //todo  // 封装内存buffer
+                //todo  // 封装内存buffer             // 根据内存大小封装批次（有内存、有批次对象）
                 MemoryRecordsBuilder recordsBuilder = recordsBuilder(buffer, maxUsableMagic);
-                //todo  // 再次封装（得到真正的批次大小）
+                //todo  // 再次封装（得到真正的批次大小）             // 尝试向队列里面添加数据
                 ProducerBatch batch = new ProducerBatch(tp, recordsBuilder, nowMs);
                 FutureRecordMetadata future = Objects.requireNonNull(batch.tryAppend(timestamp, key, value, headers,
                         callback, nowMs));
@@ -225,6 +225,7 @@ public final class RecordAccumulator {
             }
         } finally {
             if (buffer != null)
+                //todo         //释放内存
                 free.deallocate(buffer);
             appendsInProgress.decrementAndGet();
         }
@@ -425,7 +426,7 @@ public final class RecordAccumulator {
      * </ul>
      * </ol>
      */
-    //todo // 是否准备发送
+    //todo // 是否准备发送 // 1、检查32m缓存是否准备好（ling.ms 时间是否到）
     public ReadyCheckResult ready(Cluster cluster, long nowMs) {
         Set<Node> readyNodes = new HashSet<>();
         long nextReadyCheckDelayMs = Long.MAX_VALUE;
@@ -453,7 +454,7 @@ public final class RecordAccumulator {
                         long timeToWaitMs = backingOff ? retryBackoffMs : lingerMs;
                         //todo  // 批次大小满足发送条件
                         boolean full = deque.size() > 1 || batch.isFull();
-                        //todo // 如果超时，也要发送
+                        //todo  // 如果等待的时间超过了 timeToWaitMs，expired=true，表示可以发送数据
                         boolean expired = waitedTimeMs >= timeToWaitMs;
                         boolean transactionCompleting = transactionManager != null && transactionManager.isCompleting();
                         boolean sendable = full

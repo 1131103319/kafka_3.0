@@ -254,6 +254,10 @@ public class Fetcher<K, V> implements Closeable {
         for (Map.Entry<Node, FetchSessionHandler.FetchRequestData> entry : fetchRequestMap.entrySet()) {
             final Node fetchTarget = entry.getKey();
             final FetchSessionHandler.FetchRequestData data = entry.getValue();
+            //todo // 初始化抓取数据的参数：
+            //        // 最大等待时间默认 500ms
+            //        // 最小抓取一个字节
+            //        // 最大抓取 50m 数据
             final FetchRequest.Builder request = FetchRequest.Builder
                     .forConsumer(this.maxWaitMs, this.minBytes, data.toSend())
                     .isolationLevel(isolationLevel)
@@ -265,17 +269,21 @@ public class Fetcher<K, V> implements Closeable {
             if (log.isDebugEnabled()) {
                 log.debug("Sending {} {} to broker {}", isolationLevel, data.toString(), fetchTarget);
             }
+            //todo         // 发送拉取数据请求
             RequestFuture<ClientResponse> future = client.send(fetchTarget, request);
             // We add the node to the set of nodes with pending fetch requests before adding the
             // listener because the future may have been fulfilled on another thread (e.g. during a
             // disconnection being handled by the heartbeat thread) which will mean the listener
             // will be invoked synchronously.
             this.nodesWithPendingFetchRequests.add(entry.getKey().id());
+            //todo         // 监听服务器返回的数据
             future.addListener(new RequestFutureListener<ClientResponse>() {
                 @Override
+                //todo             // 成功接收服务器端数据
                 public void onSuccess(ClientResponse resp) {
                     synchronized (Fetcher.this) {
                         try {
+                            //todo                         // 获取服务器响应数据
                             FetchResponse response = (FetchResponse) resp.responseBody();
                             FetchSessionHandler handler = sessionHandler(fetchTarget.id());
                             if (handler == null) {
@@ -293,6 +301,7 @@ public class Fetcher<K, V> implements Closeable {
                             for (Map.Entry<TopicPartition, FetchResponseData.PartitionData> entry : response.responseData().entrySet()) {
                                 TopicPartition partition = entry.getKey();
                                 FetchRequest.PartitionData requestData = data.sessionPartitions().get(partition);
+                                //todo                             // 没有数据
                                 if (requestData == null) {
                                     String message;
                                     if (data.metadata().isFull()) {
@@ -316,7 +325,7 @@ public class Fetcher<K, V> implements Closeable {
 
                                     Iterator<? extends RecordBatch> batches = FetchResponse.recordsOrFail(partitionData).batches().iterator();
                                     short responseVersion = resp.requestHeader().apiVersion();
-
+                                    //todo                                 // 把数据按照分区，添加到消息队列里面
                                     completedFetches.add(new CompletedFetch(partition, partitionData,
                                             metricAggregator, batches, fetchOffset, responseVersion));
                                 }
@@ -635,12 +644,16 @@ public class Fetcher<K, V> implements Closeable {
     public Map<TopicPartition, List<ConsumerRecord<K, V>>> fetchedRecords() {
         Map<TopicPartition, List<ConsumerRecord<K, V>>> fetched = new HashMap<>();
         Queue<CompletedFetch> pausedCompletedFetches = new ArrayDeque<>();
+        //todo     // 一次处理的最大条数，默认500条
         int recordsRemaining = maxPollRecords;
 
         try {
+            //todo         // 循环处理
             while (recordsRemaining > 0) {
                 if (nextInLineFetch == null || nextInLineFetch.isConsumed) {
+                    //todo                 // 从缓存中获取数据
                     CompletedFetch records = completedFetches.peek();
+                    //todo                 // 缓存中数据为 null,直接跳出循环
                     if (records == null) break;
 
                     if (records.notInitialized()) {
@@ -661,6 +674,7 @@ public class Fetcher<K, V> implements Closeable {
                     } else {
                         nextInLineFetch = records;
                     }
+                    //todo                 // 从缓存中拉取数据，处理数据
                     completedFetches.poll();
                 } else if (subscriptions.isPaused(nextInLineFetch.partition)) {
                     // when the partition is paused we add the records back to the completedFetches queue instead of draining
@@ -685,6 +699,7 @@ public class Fetcher<K, V> implements Closeable {
                             newRecords.addAll(records);
                             fetched.put(partition, newRecords);
                         }
+                        //todo                     // 处理多少条，就减去多少条
                         recordsRemaining -= records.size();
                     }
                 }

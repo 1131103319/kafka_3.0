@@ -44,20 +44,24 @@ public class Consumer extends ShutdownableThread {
                     final CountDownLatch latch) {
         super("KafkaConsumerExample", false);
         this.groupId = groupId;
+        //todo         // 1、创建消费者的配置对象
         Properties props = new Properties();
+        //todo         // 2、给消费者配置对象添加参数
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaProperties.KAFKA_SERVER_URL + ":" + KafkaProperties.KAFKA_SERVER_PORT);
+        //todo         // 配置消费者组（组名任意起）必须
         props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         instanceId.ifPresent(id -> props.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, id));
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
         props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "30000");
+        //todo         // 配置序列化，必须
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.IntegerDeserializer");
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
         if (readCommitted) {
             props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
         }
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-
+        //todo         // 创建消费者对象
         consumer = new KafkaConsumer<>(props);
         this.topic = topic;
         this.numMessageToConsume = numMessageToConsume;
@@ -71,8 +75,11 @@ public class Consumer extends ShutdownableThread {
 
     @Override
     public void doWork() {
+        //todo         // 注册要消费的主题（可以消费多个主题）
         consumer.subscribe(Collections.singletonList(this.topic));
+        //todo         // 拉取数据打印             // 设置1s中消费一批数据
         ConsumerRecords<Integer, String> records = consumer.poll(Duration.ofSeconds(1));
+        //todo             // 打印消费到的数据
         for (ConsumerRecord<Integer, String> record : records) {
             System.out.println(groupId + " received message : from partition " + record.partition() + ", (" + record.key() + ", " + record.value() + ") at offset " + record.offset());
         }

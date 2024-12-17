@@ -791,7 +791,7 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
             );
 
             // no coordinator will be constructed for the default (null) group id
-            //todo  //  为消费者组准备的
+            //todo  //  为消费者组准备的        // 创建消费者协调器
             //        // auto.commit.interval.ms  自动提交offset时间 默认5s
             this.coordinator = !groupId.isPresent() ? null :
                 new ConsumerCoordinator(groupRebalanceConfig,
@@ -1250,6 +1250,7 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     private ConsumerRecords<K, V> poll(final Timer timer, final boolean includeMetadataInTimeout) {
         acquireAndEnsureOpen();
         try {
+            //todo         // 记录开始拉取消息时间
             this.kafkaConsumerMetrics.recordPollStart(timer.currentTimeMs());
 
             if (this.subscriptions.hasNoSubscriptionOrUserAssignment()) {
@@ -1337,7 +1338,7 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
             return !fetcher.hasAvailableFetches();
         });
         timer.update(pollTimer.currentTimeMs());
-
+        //todo     // 2.2、把数据按照分区封装号，一次默认500条数据
         return fetcher.fetchedRecords();
     }
 
@@ -1525,6 +1526,7 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
         try {
             maybeThrowInvalidGroupIdException();
             offsets.forEach(this::updateLastSeenEpochIfNewer);
+            //todo         // 同步提交
             if (!coordinator.commitOffsetsSync(new HashMap<>(offsets), time.timer(timeout))) {
                 throw new TimeoutException("Timeout of " + timeout.toMillis() + "ms expired before successfully " +
                         "committing offsets " + offsets);

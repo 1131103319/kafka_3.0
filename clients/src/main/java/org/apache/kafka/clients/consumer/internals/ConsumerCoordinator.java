@@ -468,6 +468,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
      * @return true iff the operation succeeded
      */
     public boolean poll(Timer timer, boolean waitForJoinGroup) {
+        //todo     // 获取最新元数据
         maybeUpdateSubscriptionMetadata();
 
         invokeCompletedOffsetCommitCallbacks();
@@ -486,7 +487,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
             if (coordinatorUnknown() && !ensureCoordinatorReady(timer)) {
                 return false;
             }
-
+            //todo         // 判断是否需要加入消费者组
             if (rejoinNeededOrPending()) {
                 // due to a race condition between the initial metadata fetch and the initial rebalance,
                 // we need to ensure that the metadata is fresh before joining initially. This ensures
@@ -506,7 +507,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
                     if (!client.ensureFreshMetadata(timer)) {
                         return false;
                     }
-
+                    //todo                 // 是自动提交offset
                     maybeUpdateSubscriptionMetadata();
                 }
 
@@ -1027,7 +1028,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
             if (coordinatorUnknown() && !ensureCoordinatorReady(timer)) {
                 return false;
             }
-
+            //todo         // 发送提交请求
             RequestFuture<Void> future = sendOffsetCommitRequest(offsets);
             client.poll(future, timer);
 
@@ -1035,7 +1036,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
             // the corresponding callbacks are invoked prior to returning in order to preserve the order that
             // the offset commits were applied.
             invokeCompletedOffsetCommitCallbacks();
-
+            //todo         // 提交成功
             if (future.succeeded()) {
                 if (interceptors != null)
                     interceptors.onCommit(offsets);
@@ -1047,7 +1048,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
 
             timer.sleep(rebalanceConfig.retryBackoffMs);
         } while (timer.notExpired());
-
+        //todo     // 直到超时，或者提交成功
         return false;
     }
 

@@ -232,17 +232,21 @@ public abstract class AbstractCoordinator implements Closeable {
      * @param timer Timer bounding how long this method can block
      * @return true If coordinator discovery and initial connection succeeded, false otherwise
      */
+    //todo //保证和 Coordinator 正常通信（寻找服务器端的 coordinator）
     protected synchronized boolean ensureCoordinatorReady(final Timer timer) {
+        //todo     // 如果找到 coordinator，直接返回
         if (!coordinatorUnknown())
             return true;
-
+        //todo     // 如果没有找到，循环给服务器端发送请求，直到找到 coordinator
         do {
             if (fatalFindCoordinatorException != null) {
                 final RuntimeException fatalException = fatalFindCoordinatorException;
                 fatalFindCoordinatorException = null;
                 throw fatalException;
             }
+            //todo         // 创建一个寻找coordinator的请求，并发送
             final RequestFuture<Void> future = lookupCoordinator();
+            //todo         // 获取服务器返回的结果
             client.poll(future, timer);
 
             if (!future.isDone()) {

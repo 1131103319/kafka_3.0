@@ -488,6 +488,7 @@ public class NetworkClient implements KafkaClient {
             }
             // The call to build may also throw UnsupportedVersionException, if there are essential
             // fields that cannot be represented in the chosen version.
+            //todo         // 发送请求
             doSend(clientRequest, isInternalRequest, now, builder.build(version));
         } catch (UnsupportedVersionException unsupportedVersionException) {
             // If the version is not supported, skip sending the request over the wire.
@@ -520,7 +521,9 @@ public class NetworkClient implements KafkaClient {
                 request,
                 send,
                 now);
+        //todo     // 添加请求到inflint
         this.inFlightRequests.add(inFlightRequest);
+        //todo     // 发送数据
         selector.send(new NetworkSend(clientRequest.destination(), send));
     }
 
@@ -554,6 +557,7 @@ public class NetworkClient implements KafkaClient {
         }
 
         // process completed actions
+        //todo     // 获取发送后的响应
         long updatedNow = this.time.milliseconds();
         List<ClientResponse> responses = new ArrayList<>();
         handleCompletedSends(responses, updatedNow);

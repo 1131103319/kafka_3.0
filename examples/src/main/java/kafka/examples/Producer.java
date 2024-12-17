@@ -42,9 +42,12 @@ public class Producer extends Thread {
                     final int numRecords,
                     final int transactionTimeoutMs,
                     final CountDownLatch latch) {
+        //todo         // 1、创建kafka生产者的配置对象
         Properties props = new Properties();
+        //todo         // 2、给kafka配置对象添加配置信息：bootstrap.servers
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaProperties.KAFKA_SERVER_URL + ":" + KafkaProperties.KAFKA_SERVER_PORT);
         props.put(ProducerConfig.CLIENT_ID_CONFIG, "DemoProducer");
+        //todo         // key,value(必须)：key.serializer, value.serializer
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, IntegerSerializer.class.getName());
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         if (transactionTimeoutMs > 0) {
@@ -54,7 +57,7 @@ public class Producer extends Thread {
             props.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, transactionalId);
         }
         props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, enableIdempotency);
-
+        //todo         // 3、创建kafka生产者对象
         producer = new KafkaProducer<>(props);
         this.topic = topic;
         this.isAsync = isAsync;
@@ -79,6 +82,7 @@ public class Producer extends Thread {
                     messageStr), new DemoCallBack(startTime, messageKey, messageStr));
             } else { // Send synchronously
                 try {
+                    //todo         // 4、调用send方法，发送消息
                     producer.send(new ProducerRecord<>(topic,
                         messageKey,
                         messageStr)).get();
